@@ -1,8 +1,7 @@
 package m2csv
 
 import org.apache.commons.csv.{CSVFormat, CSVPrinter}
-import org.mongodb.scala.bson
-import org.mongodb.scala.bson.collection.mutable.Document
+import org.mongodb.scala.{Document, bson}
 
 import java.io.BufferedWriter
 import java.nio.file.{Files, Paths}
@@ -24,28 +23,37 @@ class Mongo2CSV {
     Try {
       val mExport: MongoExport = new MongoExport(parameters.database, parameters.collection, parameters.host, parameters.port)
       val docsMongo: Seq[Document] = mExport.documentsMongo
-
-      createCSVFile(parameters.csvDir, docsMongo)
+      createCSVFile(parameters.csvDir, docsMongo) match {
+        case Success(fileCsvOut) => println(s"\nFILE GENERATED SUCCESSFULLY IN: $fileCsvOut")
+        case Failure(e) => println(s"\nFAILURE TO GENERATE FILE: $e")
+      }
     }
   }
 
-  def createCSVFile(path_out: String, listDocsMongo: Seq[Document]): Try[Unit] = {
+  def createCSVFile(path_out: String, listDocsMongo: Seq[Document]): Try[String] = {
     Try {
-      val listDocsMongoValue: Iterable[Iterable[String]] = listDocsMongo.groupBy(identity).map(f => f._1.map(f => bsonValueToString(f._2)))
-      val listHeader: Seq[Iterable[String]] = listDocsMongo.map(f => f.map(f => f._1))
-      val headers: Iterable[String] = for {as <- listHeader
-                                           r <- as} yield r
-      val fileCsvOut = if (!path_out.endsWith(".csv")) path_out.concat(s"${LocalDateTime.now}.csv") else path_out
+      val headers: Iterable[String] = getHeaders(listDocsMongo)
+      val listDocsValue: Iterable[Iterable[String]] = listDocsMongo.groupBy(identity).map(f => f._1.map(f => bsonValueToString(f._2)))
+
+      val fileCsvOut: String = if (!path_out.endsWith(".csv")) path_out.concat(s"${LocalDateTime.now}.csv") else path_out
       val pathFile: BufferedWriter = Files.newBufferedWriter(Paths.get(fileCsvOut))
-      val csvFileFormat = if (headers.nonEmpty) CSVFormat.EXCEL.withHeader(headers.toSeq.distinct: _*) else
-        CSVFormat.EXCEL.withHeader("No documents found! -> Check the parameters")
+      val csvFileFormat: CSVFormat.Builder = if (headers.nonEmpty) CSVFormat.EXCEL.builder().setHeader(headers.toSeq.distinct: _*) else
+        CSVFormat.EXCEL.builder().setHeader("No documents found! -> Check the parameters")
+      val csvFilePrinter: CSVPrinter = new CSVPrinter(pathFile, csvFileFormat.build())
 
-      val csvFilePrinter = new CSVPrinter(pathFile, csvFileFormat)
-
-      listDocsMongoValue.foreach(f => csvFilePrinter.printRecord(f.toArray: _*))
+      listDocsValue.foreach(f => csvFilePrinter.printRecord(f.toArray: _*))
       csvFilePrinter.flush()
       csvFilePrinter.close()
+
+      fileCsvOut
     }
+  }
+
+  def getHeaders(listDocsMongo: Seq[Document]): Iterable[String] = {
+    val listHeader: Seq[Iterable[String]] = listDocsMongo.map(f => f.map(f => f._1))
+    val headers: Iterable[String] = for {as <- listHeader
+                                         r <- as} yield r
+    headers
   }
 
   def bsonValueToString(value: bson.BsonValue): String = {
@@ -101,12 +109,12 @@ object Mongo2CSV {
 
     (new Mongo2CSV).exportCsv(params) match {
       case Success(_) =>
-        println("Successfull!")
+        println("Successful!")
         val time2: Long = Calendar.getInstance().getTime.getTime
-        println(s"Diff time=${time2 - time1}ms")
+        println(s"Diff time=${time2 - time1}ms\n")
         System.exit(0)
       case Failure(exception) =>
-        println(s"Error: ${exception.toString}")
+        println(s"Error: ${exception.toString}\n")
         System.exit(1)
     }
   }
