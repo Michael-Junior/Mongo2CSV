@@ -38,7 +38,7 @@ class Mongo2CSV {
       val fileCsvOut: String = if (!path_out.endsWith(".csv")) path_out.concat(s"${LocalDateTime.now}.csv") else path_out
       val pathFile: BufferedWriter = Files.newBufferedWriter(Paths.get(fileCsvOut))
       val csvFileFormat: CSVFormat.Builder = if (headers.nonEmpty) CSVFormat.EXCEL.builder().setHeader(headers.toSeq.distinct: _*) else
-        CSVFormat.EXCEL.builder().setHeader("No documents found! -> Check the parameters")
+        CSVFormat.EXCEL.builder().setHeader("No documents found! -> Check collection and parameters")
       val csvFilePrinter: CSVPrinter = new CSVPrinter(pathFile, csvFileFormat.build())
 
       listDocsValue.foreach(f => csvFilePrinter.printRecord(f.toArray: _*))
