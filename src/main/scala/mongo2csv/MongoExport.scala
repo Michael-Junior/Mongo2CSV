@@ -1,4 +1,4 @@
-package m2csv
+package mongo2csv
 
 import org.mongodb.scala._
 
@@ -28,7 +28,7 @@ class MongoExport(database: String,
   private val dbase: MongoDatabase = mongoClient.getDatabase(database)
   private val coll: MongoCollection[Document] = dbase.getCollection(collection)
 
-  def documentsMongo: Seq[Document] = new DocumentObservable(coll.find()).observable.results()
+  def findAll: Seq[Document] = new DocumentObservable(coll.find()).observable.results()
 
   implicit class DocumentObservable(val observable: Observable[Document]) extends ImplicitObservable[Document] {
     override val converter: Document => String = doc => doc.toJson()

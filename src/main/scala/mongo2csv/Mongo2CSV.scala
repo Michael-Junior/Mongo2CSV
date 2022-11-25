@@ -1,4 +1,4 @@
-package m2csv
+package mongo2csv
 
 import org.apache.commons.csv.{CSVFormat, CSVPrinter}
 import org.mongodb.scala.{Document, bson}
@@ -22,7 +22,7 @@ class Mongo2CSV {
   def exportCsv(parameters: M2CSV_Parameters): Try[Unit] = {
     Try {
       val mExport: MongoExport = new MongoExport(parameters.database, parameters.collection, parameters.host, parameters.port)
-      val docsMongo: Seq[Document] = mExport.documentsMongo
+      val docsMongo: Seq[Document] = mExport.findAll
       createCSVFile(parameters.csvDir, docsMongo) match {
         case Success(fileCsvOut) => println(s"\nFILE GENERATED SUCCESSFULLY IN: $fileCsvOut")
         case Failure(e) => println(s"\nFAILURE TO GENERATE FILE: $e")
